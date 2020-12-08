@@ -7,13 +7,14 @@ import { promisify } from "util";
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 
-const buildTsc = async (tsCode: string) => {
-    const path = `./${Date.now()}`;
-    await writeFile(`${path}.ts`, Buffer.from(tsCode));
-    const { all } = await command(`npx tsc ${path}.ts`, { all: true, reject: false });
+const typecheck = async (tsCode: string) => {
+    const path = `./${Date.now()}.ts`;
 
-    await unlink(`${path}.ts`);
-    await unlink(`${path}.js`);
+    await writeFile(path, Buffer.from(tsCode));
+
+    const { all } = await command(`npx tsc --noEmit ${path}`, { all: true, reject: false });
+
+    await unlink(path);
 
     return `${all}`;
 };
@@ -24,7 +25,7 @@ test.serial("scaffolding - generate and build a ts file", async (t) => {
         const b: A = "b";
     `;
 
-    const output = await buildTsc(tsCodeWithBuildError);
+    const output = await typecheck(tsCodeWithBuildError);
 
     t.regex(output, /error TS2322/);
     t.regex(output, /is not assignable/);
@@ -49,8 +50,8 @@ test.serial("using conditional-type-checks - unhelpful error message", async (t)
         type test1 = AssertTrue<IsExact<typeof ${collection}[number][property], Table>>;
         `;
 
-    t.regex(await buildTsc(givenTs + assertion("partialCollection")), /error/);
-    t.notRegex(await buildTsc(givenTs + assertion("fullCollection")), /error/);
+    t.regex(await typecheck(givenTs + assertion("partialCollection")), /error/);
+    t.notRegex(await typecheck(givenTs + assertion("fullCollection")), /error/);
 });
 
 test.serial("with meaningful error message", async (t) => {
@@ -65,8 +66,8 @@ test.serial("with meaningful error message", async (t) => {
         type test2 = Missing<Table>;
         `;
 
-    const partialCollectionResult = await buildTsc(givenTs + assertion("partialCollection"));
-    const fullCollectionResult = await buildTsc(givenTs + assertion("fullCollection"));
+    const partialCollectionResult = await typecheck(givenTs + assertion("partialCollection"));
+    const fullCollectionResult = await typecheck(givenTs + assertion("fullCollection"));
 
     t.regex(partialCollectionResult, /does not satisfy the constraint/);
     t.regex(partialCollectionResult, new RegExp(escapeRegExp(`Type '"t3"' is not assignable to type '"t1" | "t2"'`)));
