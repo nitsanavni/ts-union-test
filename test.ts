@@ -51,3 +51,5 @@ test.serial("our case", async (t) => {
     t.regex(await buildTsc(givenTs + assertion("partialCollection")), /error/);
     t.notRegex(await buildTsc(givenTs + assertion("fullCollection")), /error/);
 });
+
+test.todo("with meaningful error messages");
