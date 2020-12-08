@@ -1,6 +1,7 @@
 import test from "ava";
 import { command } from "execa";
 import * as fs from "fs";
+import { escapeRegExp } from "lodash";
 import { promisify } from "util";
 
 const writeFile = promisify(fs.writeFile);
@@ -29,18 +30,18 @@ test.serial("scaffolding - generate and build a ts file", async (t) => {
     t.regex(output, /is not assignable/);
 });
 
+const givenTs = `
+type Table = "t1" | "t2" | "t3";
+
+const hasTable1 = { table: "t1" as "t1" };
+const hasTable2 = { table: "t2" as "t2" };
+const hasTable3 = { table: "t3" as "t3" };
+
+const partialCollection = [hasTable1, hasTable2];
+const fullCollection = [hasTable1, hasTable2, hasTable3];
+`;
+
 test.serial("our case", async (t) => {
-    const givenTs = `
-    type Table = "t1" | "t2" | "t3";
-
-    const hasTable1 = { table: "t1" as "t1" };
-    const hasTable2 = { table: "t2" as "t2" };
-    const hasTable3 = { table: "t3" as "t3" };
-
-    const partialCollection = [hasTable1, hasTable2];
-    const fullCollection = [hasTable1, hasTable2, hasTable3];
-    `;
-
     const assertion = (collection: "partialCollection" | "fullCollection") =>
         `
         import { AssertTrue, IsExact } from "conditional-type-checks";
@@ -52,4 +53,22 @@ test.serial("our case", async (t) => {
     t.notRegex(await buildTsc(givenTs + assertion("fullCollection")), /error/);
 });
 
-test.todo("with meaningful error messages");
+test.serial("with meaningful error message", async (t) => {
+    const assertion = (collection: "partialCollection" | "fullCollection") =>
+        `
+        type property = "table";
+        type actual = typeof ${collection}[number][property];
+        
+        type Extra<T extends Table> = unknown;
+        type test1 = Extra<actual>;
+        type Missing<T extends actual> = unknown;
+        type test2 = Missing<Table>;
+        `;
+
+    const partialCollectionResult = await buildTsc(givenTs + assertion("partialCollection"));
+    const fullCollectionResult = await buildTsc(givenTs + assertion("fullCollection"));
+
+    t.regex(partialCollectionResult, /does not satisfy the constraint/);
+    t.regex(partialCollectionResult, new RegExp(escapeRegExp(`Type '"t3"' is not assignable to type '"t1" | "t2"'`)));
+    t.notRegex(fullCollectionResult, /error/);
+});
