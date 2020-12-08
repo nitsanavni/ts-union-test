@@ -41,7 +41,7 @@ const partialCollection = [hasTable1, hasTable2];
 const fullCollection = [hasTable1, hasTable2, hasTable3];
 `;
 
-test.serial("our case", async (t) => {
+test.serial("using conditional-type-checks - unhelpful error message", async (t) => {
     const assertion = (collection: "partialCollection" | "fullCollection") =>
         `
         import { AssertTrue, IsExact } from "conditional-type-checks";
