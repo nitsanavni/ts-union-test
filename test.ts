@@ -1,21 +1,27 @@
 import test from "ava";
 import { command } from "execa";
 import { escapeRegExp } from "lodash";
+
 import { unlink, writeFile } from "./fs";
 
 const typecheck = async (tsCode: string) => {
     const path = `./${Date.now()}.ts`;
 
-    await writeFile(path, Buffer.from(tsCode));
+    // await writeFile(path, Buffer.from(tsCode));
 
-    const { all } = await command(`npx tsc --noEmit ${path}`, { all: true, reject: false });
+    const { all } = await command(`temp=$(mktemp -u).ts ; echo "const a=0; a=1;" > $temp ; npx tsc --noEmit $temp`, {
+        all: true,
+        reject: false,
+        env: { TMPSUFFIX: ".ts" },
+        shell: true,
+    });
 
-    await unlink(path);
+    // await unlink(path);
 
     return `${all}`;
 };
 
-test.serial("scaffolding - generate and build a ts file", async (t) => {
+test.only("scaffolding - generate and build a ts file", async (t) => {
     const tsCodeWithBuildError = `
         type A = "a";
         const b: A = "b";
