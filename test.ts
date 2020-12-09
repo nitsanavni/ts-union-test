@@ -1,11 +1,7 @@
 import test from "ava";
 import { command } from "execa";
-import * as fs from "fs";
 import { escapeRegExp } from "lodash";
-import { promisify } from "util";
-
-const writeFile = promisify(fs.writeFile);
-const unlink = promisify(fs.unlink);
+import { unlink, writeFile } from "./fs";
 
 const typecheck = async (tsCode: string) => {
     const path = `./${Date.now()}.ts`;
