@@ -8,7 +8,7 @@ const typecheck = async (tsCode: string) => {
 
     await writeFile(path, Buffer.from(tsCode));
 
-    const { all } = await command(`npx tsc --noEmit ${path}`, { all: true, reject: false });
+    const { all } = await command(`tsc --noEmit ${path}`, { all: true, reject: false, preferLocal: true });
 
     await unlink(path);
 
